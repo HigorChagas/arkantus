@@ -1,6 +1,7 @@
 import os
 import sys
 from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 
 
@@ -18,10 +19,7 @@ def main():
     api_key = os.environ.get("GEMINI_API_KEY")
     client = genai.Client(api_key=api_key)
 
-    del sys.argv[0]
-    user_prompt = " ".join(sys.argv)
-
-    print(user_prompt)
+    user_prompt = " ".join(args)
 
     response = client.models.generate_content(
         model='gemini-2.0-flash-001',
@@ -31,7 +29,6 @@ def main():
     print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
     print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
     print(f"Response: ")
-    print(f"Sistem Args: {sys.argv}")
     print(response.text)
 
 
