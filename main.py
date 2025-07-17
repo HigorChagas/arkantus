@@ -7,35 +7,20 @@ from dotenv import load_dotenv
 from prompts import system_prompt
 from call_function import available_functions, real_functions
 
+# Carrega variáveis de ambiente só uma vez
+load_dotenv()
+api_key = os.environ.get("GEMINI_API_KEY")
+client = genai.Client(api_key=api_key)
 
-def main():
-    load_dotenv()
 
-    verbose = "--verbose" in sys.argv
-    args = [arg for arg in sys.argv[1:] if not arg.startswith("--")]
-
-    if not args:
-        print("AI Code Assistant")
-        print('\nUsage: python main.py "your prompt here" [--verbose]')
-        print('Example: python main.py "How do I fix the calculator?"')
-        sys.exit(1)
-
-    api_key = os.environ.get("GEMINI_API_KEY")
-    client = genai.Client(api_key=api_key)
-
-    user_prompt = " ".join(args)
-
+def run_agent(prompt, verbose=False):
     if verbose:
-        print(f"User prompt: {user_prompt}\n")
+        print(f"User prompt: {prompt}\n")
 
     messages = [
-        types.Content(role="user", parts=[types.Part(text=user_prompt)]),
+        types.Content(role="user", parts=[types.Part(text=prompt)]),
     ]
 
-    generate_content(client, messages, verbose)
-
-
-def generate_content(client, messages, verbose):
     for i in range(20):  # no máximo 20 iterações
         if verbose:
             print(f"\n[Iteração {i+1}]")
@@ -45,7 +30,8 @@ def generate_content(client, messages, verbose):
                 model="gemini-2.0-flash-001",
                 contents=messages,
                 config=types.GenerateContentConfig(
-                    tools=[available_functions], system_instruction=system_prompt
+                    tools=[available_functions],
+                    system_instruction=system_prompt,
                 ),
             )
 
@@ -55,9 +41,11 @@ def generate_content(client, messages, verbose):
                 messages.append(candidate.content)
 
             if not response.function_calls:
-                print("Final response:")
-                print(response.text)
-                break
+                final_text = response.text
+                if verbose:
+                    print("Final response:")
+                    print(final_text)
+                return final_text
 
             for function_call_part in response.function_calls:
                 function_call_result = call_function(function_call_part, verbose)
@@ -71,7 +59,9 @@ def generate_content(client, messages, verbose):
 
         except Exception as e:
             print(f"[ERRO NA ITERAÇÃO {i+1}] {e}")
-            break
+            return f"[Erro] {e}"
+
+    return "[Erro] Limite de iterações atingido."
 
 
 def call_function(function_call_part, verbose=False):
@@ -108,6 +98,20 @@ def call_function(function_call_part, verbose=False):
             )
         ],
     )
+
+
+def main():
+    args = [arg for arg in sys.argv[1:] if not arg.startswith("--")]
+    verbose = "--verbose" in sys.argv
+
+    if not args:
+        print("AI Code Assistant")
+        print('\nUsage: python main.py "your prompt here" [--verbose]')
+        print('Example: python main.py "How do I fix the calculator?"')
+        sys.exit(1)
+
+    user_prompt = " ".join(args)
+    run_agent(user_prompt, verbose)
 
 
 if __name__ == "__main__":
