@@ -111,7 +111,10 @@ def main():
         sys.exit(1)
 
     user_prompt = " ".join(args)
-    run_agent(user_prompt, verbose)
+    result = run_agent(user_prompt, verbose)
+
+    if not verbose:
+        print(result)
 
 
 if __name__ == "__main__":
